@@ -23,7 +23,7 @@
       margin: 10px auto; 
       max-width: 800px; 
       display: flex; 
-      flex-direction: column; /* Stack vertically for labels */
+      flex-direction: column; 
       justify-content: center; 
       gap: 10px; 
       align-items: center; 
@@ -75,6 +75,14 @@
       font-weight: bold; 
     }
 
+    /* Container for large trees */
+    #tree-container {
+      overflow-x: auto; /* Enables horizontal scroll for wide trees */
+      max-width: 100vw;
+      margin: 0 auto;
+      padding-bottom: 20px;
+    }
+
     /* SVG Tree Styles for Dark Mode */
     .node circle { 
       fill: #1e1e1e; 
@@ -82,8 +90,16 @@
       transition: all 0.4s ease; 
     }
     
+    /* Typography inside the nodes */
+    .node text.range-text {
+      font: 10px sans-serif;
+      fill: #90caf9; 
+      pointer-events: none;
+    }
+
     .node text.main-text { 
-      font: 12px sans-serif; 
+      font: 14px sans-serif; 
+      font-weight: bold;
       fill: #e0e0e0; 
       pointer-events: none; 
     }
@@ -141,7 +157,6 @@
     let arr = [1, 3, 5, 7, 9, 11];
     let oldArr = null; 
 
-    // Helper strict regex for valid whole numbers (allows starting '-')
     const isValidInteger = (str) => /^-?\d+$/.test(str);
 
     function showError(msg) {
@@ -165,16 +180,13 @@
 
       for (let i = 0; i < rawItems.length; i++) {
         const s = rawItems[i].trim();
-        if (s === "") continue; // Skip empty spaces between commas
+        if (s === "") continue; 
 
-        // Strict validation: Reject trailing symbols like "5=" or "4-"
         if (!isValidInteger(s)) {
           return showError(`Invalid input at item "${s}". Please use only whole numbers without extra symbols.`);
         }
 
         const num = parseInt(s, 10);
-
-        // Min/Max limit validation
         if (num < -999 || num > 999) {
           return showError(`Value ${num} is out of bounds. Must be between -999 and 999.`);
         }
@@ -182,7 +194,6 @@
         parsedArr.push(num);
       }
 
-      // Size limit validation
       if (parsedArr.length < 1 || parsedArr.length > 16) {
         return showError("Array size must be between 1 and 16 elements.");
       }
@@ -201,7 +212,6 @@
       const idxStr = document.getElementById("idxInput").value.trim();
       const valStr = document.getElementById("valInput").value.trim();
       
-      // Strict regex validation for update fields
       if (!isValidInteger(idxStr) || !isValidInteger(valStr)) {
          return showError("Invalid update format! Ensure both index and value are pure numbers.");
       }
@@ -241,8 +251,10 @@
         }
       }
 
+      const rangeStr = (l === r) ? `[${l}]` : `[${l}-${r}]`;
+
       if (l === r) {
-        return { name: `[${l}]: ${currentSum}`, changed: isChanged, prevSum: prevSum };
+        return { range: rangeStr, val: currentSum, changed: isChanged, prevSum: prevSum };
       }
       
       const mid = Math.floor((l + r) / 2);
@@ -250,7 +262,8 @@
       const right = buildTreeData(mid + 1, r);
       
       return { 
-        name: `Sum: ${currentSum}`, 
+        range: rangeStr, 
+        val: currentSum, 
         children: [left, right], 
         changed: isChanged,
         prevSum: prevSum
@@ -263,8 +276,10 @@
 
       const treeData = buildTreeData(0, arr.length - 1);
 
-      const width = Math.max(800, arr.length * 60); 
-      const height = 480;
+      // FIX: Increased the multiplier from 70 to 120. 
+      // A circle is 80px wide (radius 40), so 120px guarantees a clean 40px gap between leaves.
+      const width = Math.max(900, arr.length * 120); 
+      const height = 500;
       
       const svg = d3.select("#tree-container").append("svg")
                     .attr("width", width).attr("height", height)
@@ -283,18 +298,24 @@
           .attr('transform', d => `translate(${d.x},${d.y})`);
                       
       node.append('circle')
-          .attr('r', 35) 
+          .attr('r', 40) 
           .style('stroke', '#4fc3f7'); 
 
       node.append('text')
-          .attr('class', 'main-text')
-          .attr('dy', d => d.data.changed ? -4 : 4)
+          .attr('class', 'range-text')
+          .attr('dy', d => d.data.changed ? -14 : -8)
           .attr('text-anchor', 'middle')
-          .text(d => d.data.name);
+          .text(d => d.data.range);
+
+      node.append('text')
+          .attr('class', 'main-text')
+          .attr('dy', d => d.data.changed ? 4 : 8)
+          .attr('text-anchor', 'middle')
+          .text(d => d.data.val);
 
       node.filter(d => d.data.changed).append('text')
           .attr('class', 'prev-text')
-          .attr('dy', 14)
+          .attr('dy', 20)
           .attr('text-anchor', 'middle')
           .text(d => `(was ${d.data.prevSum})`);
     }
